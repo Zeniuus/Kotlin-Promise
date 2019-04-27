@@ -1,0 +1,9 @@
+# IDE caches
+.idea/
+
+# macOS
+.DS_Store
+
+# Build
+out/
+.gradle/

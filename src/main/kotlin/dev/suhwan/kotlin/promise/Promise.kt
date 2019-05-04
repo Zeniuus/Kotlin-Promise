@@ -3,14 +3,24 @@ package dev.suhwan.kotlin.promise
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.launch
 
-class Promise(
-    private val block: (suspend ((Any) -> Unit, (Any) -> Unit) -> Unit)?
-) {
+class Promise private constructor () {
+    constructor(
+        block: (suspend ((Any) -> Unit, (Any) -> Unit) -> Unit)
+    ): this() {
+        executeAsCoroutine {
+            try {
+                block.invoke(::resolve, ::reject)
+            } catch (e: Throwable) {
+                reject(e)
+            }
+        }
+    }
+
     private constructor(
         parent: Promise,
         onResolvedBlock: ((Any) -> Any)? = null,
         onRejectedBlock: ((Any) -> Any)? = null
-    ) : this(null) {
+    ): this() {
         this.onResolvedBlock = onResolvedBlock
         this.onRejectedBlock = onRejectedBlock
         parent.onComplete(this)
@@ -40,18 +50,6 @@ class Promise(
     private lateinit var result: Result
 
     private val coroutineScope = CoroutineScopeHolder.getCoroutineScope()!!
-
-    init {
-        if (block != null) {
-            executeAsCoroutine {
-                try {
-                    block.invoke(::resolve, ::reject)
-                } catch (e: Throwable) {
-                    reject(e)
-                }
-            }
-        }
-    }
 
     private fun resolve(value: Any) {
         if (!::result.isInitialized) {

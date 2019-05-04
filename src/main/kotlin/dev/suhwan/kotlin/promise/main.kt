@@ -121,7 +121,7 @@ fun runBlockingWithinScope(block: (CoroutineScope) -> Any) {
         val prevCoroutineScope = CoroutineScopeHolder.getCoroutineScope()
         CoroutineScopeHolder.setCoroutineScope(this)
         val result = block(this)
-        CoroutineScopeHolder.setCoroutineScope(prevCoroutineScope)
+//        CoroutineScopeHolder.setCoroutineScope(prevCoroutineScope)
         result
     }
 }

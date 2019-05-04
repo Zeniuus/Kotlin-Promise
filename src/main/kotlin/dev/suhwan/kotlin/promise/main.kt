@@ -66,9 +66,54 @@ fun withAsyncJobs() = runBlockingWithinScope {
     })
 }
 
+fun promiseReturnsPromise() = runBlockingWithinScope {
+    suspend fun someAsyncJob(): String {
+        delay(2000)
+        return "some result"
+    }
+
+    suspend fun someFailingAsyncJob(): String {
+        delay(1000)
+        throw IOException("some error")
+    }
+
+    fun getPromiseGenerator(block: suspend () -> Any): () -> Promise {
+        return {
+            Promise { resolve, reject ->
+                val result = block()
+                println("async job finished: $result")
+                resolve(result)
+            }
+        }
+    }
+
+    val getPromiseWithAsyncJob = getPromiseGenerator(::someAsyncJob)
+    val getPromiseWithFailingAsyncJob = getPromiseGenerator(::someFailingAsyncJob)
+
+    getPromiseWithAsyncJob()
+        .then({
+            println("result 1: $it")
+            getPromiseWithAsyncJob()
+        })
+        .then({
+            println("result 2: $it")
+            getPromiseWithAsyncJob()
+        })
+        .then({
+            println("result 3: $it")
+            getPromiseWithFailingAsyncJob()
+        })
+        .then({
+            println("Should not reach here")
+        }, {
+            println("Gotcha, $it!")
+        })
+}
+
 fun main() {
     basicUsage()
     withAsyncJobs()
+    promiseReturnsPromise()
 }
 
 fun runBlockingWithinScope(block: (CoroutineScope) -> Any) {

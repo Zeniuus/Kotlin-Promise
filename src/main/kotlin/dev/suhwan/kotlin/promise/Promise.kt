@@ -53,22 +53,34 @@ class Promise private constructor () {
 
     private fun resolve(value: Any) {
         if (!::result.isInitialized) {
-            result = Result.Success(value)
-            status = Status.RESOLVED
-
-            children.forEach { child ->
-                child.onParentResolved(value)
+            when (value) {
+                is Promise -> {
+                    value.then(::resolve, ::reject)
+                }
+                else -> {
+                    result = Result.Success(value)
+                    status = Status.RESOLVED
+                    children.forEach { child ->
+                        child.onParentResolved(value)
+                    }
+                }
             }
         }
     }
 
     private fun reject(value: Any) {
         if (!::result.isInitialized) {
-            result = Result.Failure(value)
-            status = Status.REJECTED
-
-            children.forEach { child ->
-                child.onParentRejected(value)
+            when (value) {
+                is Promise -> {
+                    value.then(::reject, ::reject)
+                }
+                else -> {
+                    result = Result.Failure(value)
+                    status = Status.REJECTED
+                    children.forEach { child ->
+                        child.onParentRejected(value)
+                    }
+                }
             }
         }
     }

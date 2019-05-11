@@ -5,6 +5,7 @@ import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.runBlocking
 import kotlin.random.Random
+import kotlinx.coroutines.launch
 
 fun basicUsage() = runBlockingWithinScope {
     val random = Random.nextBoolean()
@@ -77,16 +78,6 @@ fun promiseReturnsPromise() = runBlockingWithinScope {
         throw IOException("some error")
     }
 
-    fun getPromiseGenerator(block: suspend () -> Any): () -> Promise {
-        return {
-            Promise { resolve, reject ->
-                val result = block()
-                println("async job finished: $result")
-                resolve(result)
-            }
-        }
-    }
-
     val getPromiseWithAsyncJob = getPromiseGenerator(::someAsyncJob)
     val getPromiseWithFailingAsyncJob = getPromiseGenerator(::someFailingAsyncJob)
 
@@ -110,10 +101,31 @@ fun promiseReturnsPromise() = runBlockingWithinScope {
         })
 }
 
+fun awaitUsage() = runBlockingWithinScope {
+    suspend fun someAsyncJob(): String {
+        delay(2000)
+        return "some result"
+    }
+
+    val doAsyncJob = getPromiseGenerator(::someAsyncJob)
+
+    it.launch {
+        println("Let's test await syntax!")
+        val result = await { doAsyncJob() }
+        println("result: $result")
+        await { doAsyncJob() }
+        println("result: $result")
+        await { doAsyncJob() }
+        println("result: $result")
+        println("How was it?")
+    }
+}
+
 fun main() {
     basicUsage()
     withAsyncJobs()
     promiseReturnsPromise()
+    awaitUsage()
 }
 
 fun runBlockingWithinScope(block: (CoroutineScope) -> Any) {
@@ -123,5 +135,15 @@ fun runBlockingWithinScope(block: (CoroutineScope) -> Any) {
         val result = block(this)
 //        CoroutineScopeHolder.setCoroutineScope(prevCoroutineScope)
         result
+    }
+}
+
+fun getPromiseGenerator(block: suspend () -> Any): () -> Promise {
+    return {
+        Promise { resolve, reject ->
+            val result = block()
+            println("async job finished: $result")
+            resolve(result)
+        }
     }
 }
